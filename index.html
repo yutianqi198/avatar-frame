@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>微信头像框生成器</title>
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src * 'unsafe-inline'; script-src * 'unsafe-inline'; img-src * data: blob:; font-src * data:; media-src * data: blob:; connect-src 'none'; form-action 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'">
     <script src="https://image.uc.cn/s/uae/g/3n/mos-production/fontawesome-free-7.1.0-web/js/all.min.js"></script>
@@ -46,7 +46,6 @@
         header h1 { font-size: 1.25rem; font-weight: 600; color: var(--text-main); }
         header p { font-size: 0.875rem; color: var(--text-sub); margin-top: 0.25rem; }
         
-        /* 主容器：单列居中，最大宽度 */
         main {
             flex: 1;
             max-width: 800px;
@@ -54,7 +53,6 @@
             width: 100%;
             padding: 1.5rem;
         }
-        /* 主卡片：整合所有内容 */
         .main-card {
             background: var(--card-bg);
             border-radius: var(--radius);
@@ -65,7 +63,6 @@
             gap: 1.5rem;
             padding: 1.5rem;
         }
-        /* 每个区块的样式 */
         .section {
             display: flex;
             flex-direction: column;
@@ -82,7 +79,6 @@
         }
         .section-title i { color: var(--primary-color); }
         
-        /* 上传区域 */
         .upload-area {
             border: 2px dashed var(--border-color);
             border-radius: var(--radius);
@@ -101,7 +97,6 @@
         .upload-hint { font-size: 0.8rem; color: var(--text-sub); }
         #file-input { display: none; }
         
-        /* 头像框网格 */
         .frames-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -154,7 +149,6 @@
             border-top: 1px solid rgba(0,0,0,0.05);
         }
         
-        /* 预览区域 */
         .preview-area {
             display: flex;
             flex-direction: column;
@@ -171,10 +165,21 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             background-image: url('data:image/svg+xml;utf8,<svg width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="10" height="10" fill="%23eee"/><rect x="10" y="10" width="10" height="10" fill="%23eee"/></svg>');
             cursor: grab;
+            -webkit-touch-callout: default;  /* 允许长按保存 */
         }
         canvas:active { cursor: grabbing; }
         
-        /* 变换控件 */
+        /* 保存提示 */
+        .save-hint {
+            margin-top: 0.8rem;
+            font-size: 0.8rem;
+            color: var(--primary-color);
+            background: rgba(7, 193, 96, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            display: inline-block;
+        }
+        
         .transform-controls {
             margin-top: 1rem;
             width: 100%;
@@ -233,33 +238,6 @@
             text-align: center;
         }
         
-        /* 下载按钮 */
-        .actions {
-            margin-top: 0.5rem;
-            width: 100%;
-            display: flex;
-            justify-content: center;
-        }
-        .btn {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 0.8rem 2rem;
-            border-radius: 50px;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            min-width: 160px;
-            justify-content: center;
-        }
-        .btn:hover { background-color: var(--primary-hover); }
-        .btn:disabled { background-color: #ccc; cursor: not-allowed; }
-        
-        /* Toast 通知 */
         #toast-container {
             position: fixed;
             top: 20px;
@@ -299,7 +277,6 @@
     <p>上传头像，选择边框，并可拖拽 / 缩放头像位置</p>
 </header>
 <main>
-    <!-- 整合所有内容的单个主卡片 -->
     <div class="main-card">
         <!-- 步骤1: 上传头像 -->
         <div class="section">
@@ -320,11 +297,13 @@
 
         <!-- 步骤3: 预览与调整 -->
         <div class="section">
-            <div class="section-title"><i class="fa-solid fa-eye"></i><span>3. 预览与调整</span></div>
+            <div class="section-title"><i class="fa-solid fa-eye"></i><span>3. 预览与保存</span></div>
             <div class="preview-area">
                 <canvas id="preview-canvas" width="640" height="640"></canvas>
+                <div class="save-hint">
+                    <i class="fa-regular fa-hand-pointer"></i> 💡 长按图片保存到手机 / 右键保存到电脑
+                </div>
             </div>
-            <!-- 调整控件（初始隐藏） -->
             <div class="transform-controls" id="transform-controls" style="display: none;">
                 <div class="slider-container">
                     <label><i class="fa-solid fa-magnifying-glass"></i> 缩放</label>
@@ -333,16 +312,12 @@
                 </div>
                 <div class="help-text"><i class="fa-regular fa-hand-pointer"></i> 提示：在预览图上直接拖拽可移动头像</div>
             </div>
-            <div class="actions">
-                <button class="btn" id="download-btn" disabled><i class="fa-solid fa-download"></i> 下载图片</button>
-            </div>
         </div>
     </div>
 </main>
 <div id="toast-container"></div>
 
 <script>
-    // ======================== 配置区 ========================
     const CONFIG = {
         canvasSize: 640,
         maxFileSize: 10 * 1024 * 1024,
@@ -355,7 +330,6 @@
         ]
     };
 
-    // 状态
     const state = {
         userImage: null,
         selectedFrameIndex: 0,
@@ -370,13 +344,11 @@
         dragStartOffsetY: 0
     };
 
-    // DOM 元素
     const els = {
         uploadZone: document.getElementById('upload-zone'),
         fileInput: document.getElementById('file-input'),
         framesContainer: document.getElementById('frames-container'),
         canvas: document.getElementById('preview-canvas'),
-        downloadBtn: document.getElementById('download-btn'),
         toastContainer: document.getElementById('toast-container'),
         transformControls: document.getElementById('transform-controls'),
         zoomSlider: document.getElementById('zoom-slider'),
@@ -384,7 +356,6 @@
     };
     const ctx = els.canvas.getContext('2d');
 
-    // ========== 辅助函数 ==========
     function showToast(message, type = 'info') {
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
@@ -401,7 +372,6 @@
         }, 3000);
     }
 
-    // 预加载边框图片
     function preloadFrameImages() {
         const promises = CONFIG.frames.map(frame => {
             return new Promise((resolve) => {
@@ -419,7 +389,6 @@
         });
     }
 
-    // 计算头像绘制参数
     function getAvatarDrawParams() {
         const img = state.userImage;
         const S = CONFIG.canvasSize;
@@ -466,7 +435,7 @@
         drawCanvas();
     }
 
-    // 鼠标/触摸拖拽
+    // 拖拽移动头像
     function onMouseDown(e) {
         if (!state.userImage) return;
         e.preventDefault();
@@ -524,13 +493,12 @@
         els.canvas.addEventListener('mousedown', onMouseDown);
         window.addEventListener('mousemove', onMouseMove);
         window.addEventListener('mouseup', onMouseUp);
-        els.canvas.addEventListener('touchstart', onMouseDown);
-        window.addEventListener('touchmove', onMouseMove);
+        els.canvas.addEventListener('touchstart', onMouseDown, { passive: false });
+        window.addEventListener('touchmove', onMouseMove, { passive: false });
         window.addEventListener('touchend', onMouseUp);
         els.canvas.style.cursor = 'grab';
     }
 
-    // 渲染边框选项
     function renderFrames() {
         els.framesContainer.innerHTML = '';
         CONFIG.frames.forEach((frame, index) => {
@@ -554,7 +522,6 @@
         drawCanvas();
     }
 
-    // 上传处理
     function processFile(file) {
         if (!CONFIG.allowedTypes.includes(file.type)) {
             showToast('不支持的图片格式，请上传 JPG, PNG 或 WEBP', 'error');
@@ -570,7 +537,6 @@
             img.onload = () => {
                 state.userImage = img;
                 resetTransform();
-                els.downloadBtn.disabled = false;
                 els.transformControls.style.display = 'flex';
                 drawCanvas();
                 showToast('头像上传成功，可拖拽/缩放调整', 'success');
@@ -601,36 +567,18 @@
         });
     }
 
-    function handleDownload() {
-        if (!state.userImage) return;
-        try {
-            const dataUrl = els.canvas.toDataURL('image/png');
-            const link = document.createElement('a');
-            link.download = `avatar_frame_${Date.now()}.png`;
-            link.href = dataUrl;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            showToast('下载已开始', 'success');
-        } catch (err) {
-            console.error(err);
-            showToast('下载失败，可能是跨域或图片问题', 'error');
-        }
-    }
-
     async function init() {
         renderFrames();
         await preloadFrameImages();
         drawCanvas();
         setupUploadListeners();
-        els.downloadBtn.addEventListener('click', handleDownload);
+        initDragEvents();
         if (els.zoomSlider) {
             els.zoomSlider.addEventListener('input', (e) => setScale(e.target.value));
         }
         if (els.resetBtn) {
             els.resetBtn.addEventListener('click', resetTransform);
         }
-        initDragEvents();
         els.transformControls.style.display = 'none';
     }
     init();
